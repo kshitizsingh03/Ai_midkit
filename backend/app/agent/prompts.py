@@ -73,8 +73,16 @@ You are given the current interaction details in JSON format and a natural langu
 Current Date: {TODAY_DATE}
 
 Your task is to output the updated interaction JSON.
-Only modify the fields that the user explicitly requests to change. Resolve relative dates like "next month", "in 2 weeks" relative to {TODAY_DATE}.
-Maintain all other fields exactly as they are.
+Only modify the fields that the user explicitly requests to change.
+Examples:
+- "The name is Karan, not Rahul" -> Update "Doctor Name" to "Karan".
+- "set the hospital to General Hospital" -> Update "Hospital Name" to "General Hospital".
+- "meeting time is 3 PM" -> Update "Meeting Time" to "3:00 PM".
+- "actually product discussed was CardioPlus" -> Update "Product Discussed" to "CardioPlus".
+- "change follow-up date to next week" -> Update "Follow-up Date" to the date one week from {TODAY_DATE}.
+
+Resolve relative dates like "next month", "in 2 weeks", or day names relative to {TODAY_DATE}.
+Maintain all other fields exactly as they are. Do not add or remove any fields.
 
 Return ONLY a valid JSON object with the exact same structure as the input. Do not include markdown formatting like ```json or any other text.
 """

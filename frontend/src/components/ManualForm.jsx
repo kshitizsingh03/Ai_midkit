@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { setFormData, clearForm, showToast, setStatus, setAiInsights, setDoctorHistory, setCurrentInteractionId } from '../store/interactionSlice';
+import { setFormData, clearForm, showToast, setStatus, setAiInsights, setDoctorHistory, setCurrentInteractionId, updateAllFormData } from '../store/interactionSlice';
 import axios from 'axios';
-import { User, Building2, Calendar, Clock, Award, AlertCircle, Sparkles, Trash2, Save } from 'lucide-react';
+import { User, Building2, Calendar, Clock, Award, AlertCircle, Sparkles, Trash2, Save, Mic, MicOff } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -10,9 +10,11 @@ export default function ManualForm() {
   const formData = useSelector((state) => state.interaction.formData);
   const status = useSelector((state) => state.interaction.status);
   const currentInteractionId = useSelector((state) => state.interaction.currentInteractionId);
+  const aiInsights = useSelector((state) => state.interaction.aiInsights);
   const dispatch = useDispatch();
 
   const [validationErrors, setValidationErrors] = useState({});
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
 
   const handleInputChange = (field, value) => {
     dispatch(setFormData({ field, value }));
@@ -29,14 +31,89 @@ export default function ManualForm() {
   const getInputClass = (field) => {
     const value = formData[field];
     const hasValue = value !== undefined && value !== null && (typeof value === 'string' ? value.trim() !== '' : true);
-    const base = "w-full border rounded-xl px-4 py-2.5 text-sm placeholder-slate-650 focus:outline-none focus:ring-2 transition-all duration-300 ";
+    const base = "w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 transition-all duration-300 ";
     if (validationErrors[field]) {
-      return base + "border-rose-500/50 bg-rose-500/10 focus:ring-rose-500/20 text-rose-200 shadow-md shadow-rose-950/10";
+      return base + "border-rose-300 bg-rose-50/30 text-rose-900 focus:border-rose-500 focus:ring-rose-500/10 placeholder-rose-300";
     }
     if (hasValue) {
-      return base + "border-indigo-500/40 bg-indigo-950/20 focus:border-indigo-500 focus:ring-indigo-500/20 text-slate-100 shadow-md shadow-indigo-950/10 shadow-[0_0_12px_rgba(99,102,241,0.06)] animate-fade-in";
+      return base + "border-indigo-200 bg-indigo-50/10 focus:border-indigo-500 focus:ring-indigo-500/10 text-slate-800 placeholder-slate-400 shadow-sm";
     }
-    return base + "border-slate-800 bg-slate-950/60 focus:border-indigo-500 focus:ring-indigo-500/20 text-slate-100";
+    return base + "border-slate-200 bg-slate-50/40 focus:border-indigo-500 focus:ring-indigo-500/10 text-slate-800 placeholder-slate-400";
+  };
+
+  const SpeechRecognitionAPI = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+
+  const handleVoiceNote = () => {
+    if (!SpeechRecognitionAPI) {
+      dispatch(showToast({ type: 'error', message: 'Voice input is not supported in this browser. Try Chrome or Edge.' }));
+      return;
+    }
+    
+    if (isRecordingVoice) {
+      setIsRecordingVoice(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognitionAPI();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsRecordingVoice(true);
+      dispatch(showToast({ type: 'success', message: 'Listening... Speak now!' }));
+    };
+
+    recognition.onerror = (e) => {
+      console.error(e);
+      setIsRecordingVoice(false);
+      dispatch(showToast({ type: 'error', message: 'Could not access microphone.' }));
+    };
+
+    recognition.onend = () => {
+      setIsRecordingVoice(false);
+    };
+
+    recognition.onresult = async (event) => {
+      const transcript = event.results[0][0].transcript;
+      if (!transcript.trim()) return;
+
+      dispatch(setStatus('loading'));
+      dispatch(showToast({ type: 'success', message: 'AI is extracting details from voice note...' }));
+      
+      try {
+        const response = await axios.post(`${API_URL}/interaction/chat`, {
+          text: transcript,
+          current_data: formData,
+          ai_insights: aiInsights
+        });
+
+        const { extracted_data, ai_insights, message, doctor_history } = response.data;
+
+        if (extracted_data) {
+          dispatch(updateAllFormData(extracted_data));
+        }
+        if (ai_insights) {
+          dispatch(setAiInsights(ai_insights));
+        }
+        if (doctor_history) {
+          dispatch(setDoctorHistory(doctor_history));
+        }
+        if (response.data.id) {
+          dispatch(setCurrentInteractionId(response.data.id));
+        }
+
+        dispatch(showToast({ type: 'success', message: 'Form populated from voice note!' }));
+        dispatch(setStatus('success'));
+      } catch (error) {
+        console.error(error);
+        const errMsg = error.response?.data?.detail || 'Failed to extract from voice note.';
+        dispatch(showToast({ type: 'error', message: errMsg }));
+        dispatch(setStatus('error'));
+      }
+    };
+
+    recognition.start();
   };
 
   const validateForm = () => {
@@ -60,12 +137,11 @@ export default function ManualForm() {
     try {
       let response;
       if (currentInteractionId) {
-        // Update the existing interaction (not a new one) — pass id so backend updates in place
         response = await axios.post(`${API_URL}/interaction/save`, {
           id: currentInteractionId,
           extracted_data: formData,
-          ai_insights: {
-            Sentiment: "Neutral", // Default placeholder if not computed by AI
+          ai_insights: aiInsights || {
+            Sentiment: "Neutral",
             Priority: formData["Follow-up Date"] ? "High" : "Medium",
             "Risk Level": "Low",
             "Confidence Score": 1.0,
@@ -73,14 +149,12 @@ export default function ManualForm() {
           }
         });
       } else {
-        // New manual interaction
         response = await axios.post(`${API_URL}/interaction/manual`, formData);
       }
 
       dispatch(showToast({ type: 'success', message: 'Interaction saved successfully!' }));
       dispatch(setCurrentInteractionId(response.data.id));
       
-      // Auto fetch the doctor's history to update insights panel
       try {
         const historyRes = await axios.get(`${API_URL}/doctor/history`, {
           params: { doctor_name: formData["Doctor Name"] }
@@ -112,7 +186,6 @@ export default function ManualForm() {
       
       const [sumRes, recRes] = await Promise.all([summaryPromise, recPromise]);
       
-      // Seed mock values for indicators
       dispatch(setAiInsights({
         Sentiment: (formData["Meeting Notes"] || "").toLowerCase().includes("interested") ? "Positive" : "Neutral",
         Priority: formData["Follow-up Date"] ? "High" : "Medium",
@@ -122,7 +195,6 @@ export default function ManualForm() {
         "Next Action Recommendation": recRes.data.recommendation
       }));
 
-      // Fetch doctor history
       const historyRes = await axios.get(`${API_URL}/doctor/history`, {
         params: { doctor_name: formData["Doctor Name"] }
       });
@@ -137,21 +209,19 @@ export default function ManualForm() {
     }
   };
 
-  const str = (val) => String(val);
-
   return (
-    <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 shadow-2xl backdrop-blur-md">
+    <div className="space-y-6 bg-transparent">
       <form onSubmit={handleSave} className="space-y-6">
         
         {/* SECTION 1: Doctor & Hospital Info */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-            <User className="h-5 w-5 text-indigo-400" />
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-300">Doctor & Hospital Info</h3>
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+            <User className="h-5 w-5 text-indigo-500" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Doctor & Hospital Details</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Doctor Name *</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Doctor Name *</label>
               <input
                 type="text"
                 value={formData["Doctor Name"] || ""}
@@ -160,14 +230,14 @@ export default function ManualForm() {
                 className={getInputClass("Doctor Name")}
               />
               {validationErrors["Doctor Name"] && (
-                <p className="text-rose-400 text-xxs mt-1 flex items-center gap-1">
+                <p className="text-rose-600 text-xxs mt-1 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" /> {validationErrors["Doctor Name"]}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Hospital Name *</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Hospital Name *</label>
               <input
                 type="text"
                 value={formData["Hospital Name"] || ""}
@@ -176,14 +246,14 @@ export default function ManualForm() {
                 className={getInputClass("Hospital Name")}
               />
               {validationErrors["Hospital Name"] && (
-                <p className="text-rose-400 text-xxs mt-1 flex items-center gap-1">
+                <p className="text-rose-600 text-xxs mt-1 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" /> {validationErrors["Hospital Name"]}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Specialization</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Specialization</label>
               <input
                 type="text"
                 value={formData["Specialization"] || ""}
@@ -194,7 +264,7 @@ export default function ManualForm() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Department</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Department</label>
               <input
                 type="text"
                 value={formData["Department"] || ""}
@@ -208,13 +278,13 @@ export default function ManualForm() {
 
         {/* SECTION 2: Meeting Details */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-            <Building2 className="h-5 w-5 text-indigo-400" />
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-300">Meeting Details</h3>
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+            <Building2 className="h-5 w-5 text-indigo-500" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Meeting Details</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Product Discussed *</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Product Discussed *</label>
               <input
                 type="text"
                 value={formData["Product Discussed"] || ""}
@@ -223,14 +293,14 @@ export default function ManualForm() {
                 className={getInputClass("Product Discussed")}
               />
               {validationErrors["Product Discussed"] && (
-                <p className="text-rose-400 text-xxs mt-1 flex items-center gap-1">
+                <p className="text-rose-600 text-xxs mt-1 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" /> {validationErrors["Product Discussed"]}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Meeting Date *</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Meeting Date *</label>
               <input
                 type="date"
                 value={formData["Meeting Date"] || ""}
@@ -238,14 +308,14 @@ export default function ManualForm() {
                 className={getInputClass("Meeting Date")}
               />
               {validationErrors["Meeting Date"] && (
-                <p className="text-rose-400 text-xxs mt-1 flex items-center gap-1">
+                <p className="text-rose-600 text-xxs mt-1 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" /> {validationErrors["Meeting Date"]}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Meeting Time</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Meeting Time</label>
               <input
                 type="text"
                 value={formData["Meeting Time"] || ""}
@@ -256,11 +326,11 @@ export default function ManualForm() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Interest Level</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Interest Level</label>
               <select
                 value={formData["Interest Level"] || "Medium"}
                 onChange={(e) => handleInputChange("Interest Level", e.target.value)}
-                className={getInputClass("Interest Level")}
+                className={getInputClass("Interest Level") + " bg-slate-50 text-slate-800 cursor-pointer"}
               >
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
@@ -272,13 +342,13 @@ export default function ManualForm() {
 
         {/* SECTION 3: Content & Notes */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-            <Award className="h-5 w-5 text-indigo-400" />
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-300">Notes & Requests</h3>
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+            <Award className="h-5 w-5 text-indigo-500" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Notes, Requests & Sentiment</h3>
           </div>
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Doctor Requests (free text)</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Doctor Requests (free text)</label>
               <textarea
                 value={formData["Doctor Requests"] || ""}
                 onChange={(e) => handleInputChange("Doctor Requests", e.target.value)}
@@ -289,7 +359,7 @@ export default function ManualForm() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Competitor Mentioned (optional)</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Competitor Mentioned (optional)</label>
               <input
                 type="text"
                 value={formData["Competitor Mentioned"] || ""}
@@ -300,7 +370,7 @@ export default function ManualForm() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Meeting Notes</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Topics Discussed / Meeting Notes</label>
               <textarea
                 value={formData["Meeting Notes"] || ""}
                 onChange={(e) => handleInputChange("Meeting Notes", e.target.value)}
@@ -308,10 +378,66 @@ export default function ManualForm() {
                 placeholder="Write summary notes of the interaction..."
                 className={getInputClass("Meeting Notes") + " resize-none"}
               />
+              
+              {/* Voice Note Consent Button */}
+              <div className="mt-2.5">
+                <button
+                  type="button"
+                  onClick={handleVoiceNote}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-semibold transition-all duration-300 ${
+                    isRecordingVoice 
+                      ? 'bg-rose-50 border-rose-300 text-rose-700 animate-pulse shadow-sm shadow-rose-100'
+                      : 'bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700'
+                  }`}
+                >
+                  <Mic className={`h-4 w-4 ${isRecordingVoice ? 'animate-bounce' : ''}`} />
+                  {isRecordingVoice ? 'Recording voice note... Click to stop & extract' : 'Summarize from Voice Note (Requires Consent)'}
+                </button>
+              </div>
+            </div>
+
+            {/* Observed/Inferred HCP Sentiment */}
+            <div className="space-y-2 mt-2">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Observed/Inferred HCP Sentiment</label>
+              <div className="flex gap-4 items-center">
+                {[
+                  { value: 'Positive', emoji: '😃', label: 'Positive' },
+                  { value: 'Neutral', emoji: '😐', label: 'Neutral' },
+                  { value: 'Negative', emoji: '😟', label: 'Negative' }
+                ].map((opt) => {
+                  const isChecked = aiInsights.Sentiment?.toLowerCase().includes(opt.value.toLowerCase()) || false;
+                  
+                  let activeStyles = 'bg-indigo-50 border-indigo-200 text-indigo-700 font-semibold shadow-sm';
+                  if (isChecked) {
+                    if (opt.value === 'Positive') activeStyles = 'bg-emerald-50 border-emerald-300 text-emerald-800 font-semibold shadow-sm';
+                    if (opt.value === 'Neutral') activeStyles = 'bg-amber-50 border-amber-300 text-amber-800 font-semibold shadow-sm';
+                    if (opt.value === 'Negative') activeStyles = 'bg-rose-50 border-rose-300 text-rose-800 font-semibold shadow-sm';
+                  }
+                  
+                  return (
+                    <label key={opt.value} className={`flex items-center gap-2 cursor-pointer px-4.5 py-2.5 rounded-xl border transition-all duration-300 select-none ${
+                      isChecked 
+                        ? activeStyles 
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="sentiment"
+                        value={opt.value}
+                        checked={isChecked}
+                        onChange={() => dispatch(setAiInsights({ ...aiInsights, Sentiment: opt.value }))}
+                        className="hidden"
+                      />
+                      <span className="text-base">{opt.emoji}</span>
+                      <span className="text-xs">{opt.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Action Items</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Action Items</label>
               <textarea
                 value={formData["Action Items"] || ""}
                 onChange={(e) => handleInputChange("Action Items", e.target.value)}
@@ -325,13 +451,13 @@ export default function ManualForm() {
 
         {/* SECTION 4: Follow-up & Identity */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-            <Calendar className="h-5 w-5 text-indigo-400" />
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-300">Follow-up & Representative</h3>
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+            <Calendar className="h-5 w-5 text-indigo-500" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Follow-up & Representative</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Follow-up Date</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Follow-up Date</label>
               <input
                 type="date"
                 value={formData["Follow-up Date"] || ""}
@@ -341,7 +467,7 @@ export default function ManualForm() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Representative Name</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Representative Name</label>
               <input
                 type="text"
                 value={formData["Representative Name"] || ""}
@@ -353,7 +479,7 @@ export default function ManualForm() {
           </div>
 
           <div className="grid grid-cols-1 mt-4">
-            <label className="block text-xs font-medium text-slate-400 mb-1">Additional Comments (always visible, always optional)</label>
+            <label className="block text-xs font-semibold text-slate-500 mb-1">Additional Comments</label>
             <textarea
               value={formData["Additional Comments"] || ""}
               onChange={(e) => handleInputChange("Additional Comments", e.target.value)}
@@ -365,11 +491,11 @@ export default function ManualForm() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-850">
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-100">
           <button
             type="button"
             onClick={() => dispatch(clearForm())}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-800 text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-all uppercase tracking-wider"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all uppercase tracking-wider bg-white shadow-sm"
           >
             <Trash2 className="h-4 w-4" />
             Clear
@@ -380,7 +506,7 @@ export default function ManualForm() {
               type="button"
               onClick={handleEnrich}
               disabled={status === 'loading'}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-indigo-500/30 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 text-xs font-semibold transition-all uppercase tracking-wider disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-xs font-semibold transition-all uppercase tracking-wider disabled:opacity-50 bg-white shadow-sm"
             >
               <Sparkles className="h-4 w-4" />
               AI Insights
@@ -388,7 +514,7 @@ export default function ManualForm() {
             <button
               type="submit"
               disabled={status === 'loading'}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-xs font-semibold text-white shadow-lg shadow-indigo-600/20 transition-all uppercase tracking-wider disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white transition-all uppercase tracking-wider disabled:opacity-50 shadow-sm shadow-indigo-200"
             >
               <Save className="h-4 w-4" />
               {status === 'loading' ? 'Saving...' : 'Save Log'}

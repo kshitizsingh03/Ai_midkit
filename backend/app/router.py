@@ -125,7 +125,7 @@ def edit_existing_interaction(id: int, payload: schemas.EditRequest, db: Session
             extracted_data=schemas.InteractionStaged(**extracted_data) if extracted_data else None,
             ai_insights=schemas.AIInsights(**ai_insights) if ai_insights else None,
             message=message,
-            id=interaction_id
+            id=res.get("interaction_id") or id
         )
     except HTTPException:
         raise

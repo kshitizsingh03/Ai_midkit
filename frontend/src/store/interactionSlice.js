@@ -30,7 +30,7 @@ const initialInsightsState = {
 const interactionSlice = createSlice({
   name: 'interaction',
   initialState: {
-    activeTab: 'form', // 'form' | 'chat'
+    activeTab: 'chat', // 'chat' | 'insights'
     formData: { ...initialFormState },
     aiInsights: { ...initialInsightsState },
     doctorHistory: [],

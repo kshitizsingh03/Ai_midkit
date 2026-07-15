@@ -14,6 +14,7 @@ export default function ChatInterface() {
   const status = useSelector((state) => state.interaction.status);
   const currentInteractionId = useSelector((state) => state.interaction.currentInteractionId);
   const formData = useSelector((state) => state.interaction.formData);
+  const aiInsights = useSelector((state) => state.interaction.aiInsights);
   const dispatch = useDispatch();
 
   const [inputValue, setInputValue] = useState('');
@@ -122,7 +123,7 @@ export default function ChatInterface() {
       let replyMessage = message;
       if (!replyMessage) {
         replyMessage = extracted_data
-          ? "I have successfully analyzed the details and updated the form on the right. Please review the details, verify the AI Insights, and click 'Save Log' when ready!"
+          ? "I have successfully analyzed the details and updated the form on the left. Please review the details, verify the AI Insights, and click 'Save Log' when ready!"
           : "I have successfully processed your request.";
       }
       
@@ -152,39 +153,48 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-[650px] bg-slate-900/40 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-md">
+    <div className="flex flex-col h-[650px] bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
       
       {/* Chat Header */}
-      <div className="flex items-center gap-3 px-6 py-4 bg-slate-900/60 border-b border-slate-850">
-        <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+      <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 border-b border-slate-100">
+        <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600">
           <Bot className="h-5 w-5" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-slate-200">Conversational Log Assistant</h3>
-          <p className="text-xxs text-slate-400 flex items-center gap-1">
-            <Sparkles className="h-3 w-3 text-indigo-400 animate-pulse" /> Powered by LangGraph + Groq API
+          <h3 className="text-sm font-semibold text-slate-800">Conversational Log Assistant</h3>
+          <p className="text-[10px] text-slate-500 flex items-center gap-1">
+            <Sparkles className="h-3 w-3 text-indigo-500 animate-pulse" /> Powered by LangGraph + Groq API
           </p>
         </div>
       </div>
 
       {/* Messages Window */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/20">
         {chatMessages.map((msg) => {
           const isAI = msg.sender === 'ai';
+          const isSuccess = msg.text.startsWith('✅') || msg.text.includes('success') || msg.text.includes('populated') || msg.text.includes('updated');
+          
+          let bubbleStyles = 'bg-slate-100 border-slate-200 text-slate-700 rounded-tl-none';
+          if (isAI) {
+            if (isSuccess) {
+              bubbleStyles = 'bg-emerald-50 border-emerald-100 text-emerald-900 rounded-tl-none shadow-sm';
+            } else {
+              bubbleStyles = 'bg-slate-100 border-slate-200 text-slate-750 rounded-tl-none shadow-sm';
+            }
+          } else {
+            bubbleStyles = 'bg-indigo-50 border-indigo-100 text-indigo-900 rounded-tr-none shadow-sm';
+          }
+
           return (
             <div key={msg.id} className={`flex gap-3 max-w-[85%] ${isAI ? 'mr-auto' : 'ml-auto flex-row-reverse'}`}>
               <div className={`flex-shrink-0 h-8 w-8 rounded-lg flex items-center justify-center text-xs font-semibold ${
                 isAI 
-                  ? 'bg-indigo-600/20 border border-indigo-500/20 text-indigo-400' 
-                  : 'bg-violet-600/20 border border-violet-500/20 text-violet-400'
+                  ? 'bg-indigo-50 border border-indigo-100 text-indigo-600 shadow-sm' 
+                  : 'bg-indigo-600 text-white shadow-sm'
               }`}>
                 {isAI ? <Bot className="h-4.5 w-4.5" /> : <User className="h-4.5 w-4.5" />}
               </div>
-              <div className={`p-4 rounded-2xl text-xs leading-relaxed border ${
-                isAI 
-                  ? 'bg-slate-900/60 border-slate-850 text-slate-300 rounded-tl-none' 
-                  : 'bg-indigo-600/10 border-indigo-500/20 text-indigo-200 rounded-tr-none'
-              }`}>
+              <div className={`p-4 rounded-2xl text-xs leading-relaxed border ${bubbleStyles}`}>
                 {msg.text}
               </div>
             </div>
@@ -192,12 +202,12 @@ export default function ChatInterface() {
         })}
         {status === 'loading' && (
           <div className="flex gap-3 max-w-[80%] mr-auto items-center">
-            <div className="h-8 w-8 rounded-lg bg-indigo-600/20 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center">
               <Bot className="h-4.5 w-4.5" />
             </div>
-            <div className="flex items-center gap-2 px-4 py-3 bg-slate-900/40 border border-slate-850 rounded-2xl rounded-tl-none text-xs text-slate-400">
-              <Loader className="h-3.5 w-3.5 animate-spin text-indigo-400" />
-              <span>AI is thinking & extracting data fields...</span>
+            <div className="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 rounded-2xl rounded-tl-none text-xs text-slate-500 shadow-sm">
+              <Loader className="h-3.5 w-3.5 animate-spin text-indigo-600" />
+              <span>AI is thinking & extracting details...</span>
             </div>
           </div>
         )}
@@ -205,10 +215,10 @@ export default function ChatInterface() {
       </div>
 
       {/* Quick Action Suggestion Chips */}
-      <div className="px-4 py-2 bg-slate-950/20 border-t border-slate-850 flex flex-wrap gap-2">
+      <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-2">
         {[
           { label: "🎙️ Log Meeting", text: "Today I met Dr. Sanjay Sharma at City Hospital. We discussed CardioPlus. Doctor was very interested and positive about it. Schedule follow-up after two weeks at 10 AM." },
-          { label: "✏️ Change Doctor", text: "Actually, change the doctor name to Dr. Sanjay Sharma." },
+          { label: "✏️ Change Doctor", text: "Actually, the doctor name is Karan, not Rahul." },
           { label: "✏️ Change Time", text: "Set meeting time to 11:30 AM." },
           { label: "📋 Show History", text: "Show previous interactions with Dr. Sanjay Sharma." }
         ].map((chip, idx) => (
@@ -216,7 +226,7 @@ export default function ChatInterface() {
             key={idx}
             type="button"
             onClick={() => setInputValue(chip.text)}
-            className="px-2.5 py-1 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 text-[10px] text-slate-400 hover:text-indigo-300 transition-all font-medium"
+            className="px-2.5 py-1 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30 text-[10px] text-slate-600 hover:text-indigo-750 transition-all font-medium shadow-sm"
           >
             {chip.label}
           </button>
@@ -225,8 +235,8 @@ export default function ChatInterface() {
 
       {/* Speech wave visualizer */}
       {isListening && (
-        <div className="flex items-center justify-center gap-1.5 py-2.5 bg-rose-500/5 border-t border-rose-500/10">
-          <span className="text-[10px] text-rose-450 font-bold tracking-wider animate-pulse mr-2">RECORDING VOICE INPUT:</span>
+        <div className="flex items-center justify-center gap-1.5 py-2.5 bg-rose-50 border-t border-rose-100">
+          <span className="text-[10px] text-rose-600 font-bold tracking-wider animate-pulse mr-2">RECORDING VOICE:</span>
           <div className="w-0.5 h-4 bg-rose-500 rounded-full origin-bottom animate-wave-1"></div>
           <div className="w-0.5 h-6 bg-rose-500 rounded-full origin-bottom animate-wave-2"></div>
           <div className="w-0.5 h-3 bg-rose-500 rounded-full origin-bottom animate-wave-3"></div>
@@ -236,16 +246,16 @@ export default function ChatInterface() {
       )}
 
       {/* Chat Input */}
-      <form onSubmit={handleSendMessage} className="p-4 bg-slate-900/60 border-t border-slate-850">
+      <form onSubmit={handleSendMessage} className="p-4 bg-slate-50 border-t border-slate-100">
         <div className="relative flex items-center gap-2">
           <button
             type="button"
             onClick={toggleListening}
             title={isListening ? "Stop listening" : "Speak your meeting notes"}
-            className={`flex-shrink-0 p-3 rounded-2xl border transition-all ${
+            className={`flex-shrink-0 p-3 rounded-2xl border transition-all shadow-sm ${
               isListening
                 ? 'bg-rose-600 border-rose-500 text-white animate-pulse'
-                : 'bg-slate-950/60 border-slate-800 text-indigo-400 hover:border-indigo-500 hover:bg-indigo-500/10'
+                : 'bg-white border-slate-200 text-indigo-650 hover:border-indigo-400 hover:bg-indigo-50/20'
             }`}
           >
             {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -257,12 +267,12 @@ export default function ChatInterface() {
               onChange={(e) => setInputValue(e.target.value)}
               disabled={status === 'loading'}
               placeholder={isListening ? "Listening... speak now" : "Type or click the mic to speak your meeting notes..."}
-              className="w-full bg-slate-950/60 border border-slate-800 rounded-2xl pl-4 pr-12 py-3 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all disabled:opacity-50"
+              className="w-full bg-white border border-slate-200 rounded-2xl pl-4 pr-12 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all shadow-inner"
             />
             <button
               type="submit"
               disabled={status === 'loading' || !inputValue.trim()}
-              className="absolute right-2.5 top-2.5 p-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 transition-all disabled:opacity-30"
+              className="absolute right-2.5 top-2.5 p-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 transition-all disabled:opacity-30 shadow-sm"
             >
               <Send className="h-4 w-4" />
             </button>
