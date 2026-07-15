@@ -26,6 +26,19 @@ export default function ManualForm() {
     }
   };
 
+  const getInputClass = (field) => {
+    const value = formData[field];
+    const hasValue = value !== undefined && value !== null && (typeof value === 'string' ? value.trim() !== '' : true);
+    const base = "w-full border rounded-xl px-4 py-2.5 text-sm placeholder-slate-650 focus:outline-none focus:ring-2 transition-all duration-300 ";
+    if (validationErrors[field]) {
+      return base + "border-rose-500/50 bg-rose-500/10 focus:ring-rose-500/20 text-rose-200 shadow-md shadow-rose-950/10";
+    }
+    if (hasValue) {
+      return base + "border-indigo-500/40 bg-indigo-950/20 focus:border-indigo-500 focus:ring-indigo-500/20 text-slate-100 shadow-md shadow-indigo-950/10 shadow-[0_0_12px_rgba(99,102,241,0.06)] animate-fade-in";
+    }
+    return base + "border-slate-800 bg-slate-950/60 focus:border-indigo-500 focus:ring-indigo-500/20 text-slate-100";
+  };
+
   const validateForm = () => {
     const errors = {};
     if (!formData["Doctor Name"]?.trim()) errors["Doctor Name"] = "Doctor Name is required";
@@ -144,9 +157,7 @@ export default function ManualForm() {
                 value={formData["Doctor Name"] || ""}
                 onChange={(e) => handleInputChange("Doctor Name", e.target.value)}
                 placeholder="e.g. Dr. Sharma"
-                className={`w-full bg-slate-950/60 border rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 transition-all ${
-                  validationErrors["Doctor Name"] ? 'border-rose-500/50 focus:ring-rose-500/20' : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500/20'
-                }`}
+                className={getInputClass("Doctor Name")}
               />
               {validationErrors["Doctor Name"] && (
                 <p className="text-rose-400 text-xxs mt-1 flex items-center gap-1">
@@ -162,9 +173,7 @@ export default function ManualForm() {
                 value={formData["Hospital Name"] || ""}
                 onChange={(e) => handleInputChange("Hospital Name", e.target.value)}
                 placeholder="e.g. Apollo Hospital"
-                className={`w-full bg-slate-950/60 border rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 transition-all ${
-                  validationErrors["Hospital Name"] ? 'border-rose-500/50 focus:ring-rose-500/20' : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500/20'
-                }`}
+                className={getInputClass("Hospital Name")}
               />
               {validationErrors["Hospital Name"] && (
                 <p className="text-rose-400 text-xxs mt-1 flex items-center gap-1">
@@ -180,7 +189,7 @@ export default function ManualForm() {
                 value={formData["Specialization"] || ""}
                 onChange={(e) => handleInputChange("Specialization", e.target.value)}
                 placeholder="e.g. Cardiology"
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                className={getInputClass("Specialization")}
               />
             </div>
 
@@ -191,7 +200,7 @@ export default function ManualForm() {
                 value={formData["Department"] || ""}
                 onChange={(e) => handleInputChange("Department", e.target.value)}
                 placeholder="e.g. Cardiology Dept"
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                className={getInputClass("Department")}
               />
             </div>
           </div>
@@ -211,9 +220,7 @@ export default function ManualForm() {
                 value={formData["Product Discussed"] || ""}
                 onChange={(e) => handleInputChange("Product Discussed", e.target.value)}
                 placeholder="e.g. CardioPlus"
-                className={`w-full bg-slate-950/60 border rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 transition-all ${
-                  validationErrors["Product Discussed"] ? 'border-rose-500/50 focus:ring-rose-500/20' : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500/20'
-                }`}
+                className={getInputClass("Product Discussed")}
               />
               {validationErrors["Product Discussed"] && (
                 <p className="text-rose-400 text-xxs mt-1 flex items-center gap-1">
@@ -228,9 +235,7 @@ export default function ManualForm() {
                 type="date"
                 value={formData["Meeting Date"] || ""}
                 onChange={(e) => handleInputChange("Meeting Date", e.target.value)}
-                className={`w-full bg-slate-950/60 border rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 transition-all ${
-                  validationErrors["Meeting Date"] ? 'border-rose-500/50 focus:ring-rose-500/20' : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500/20'
-                }`}
+                className={getInputClass("Meeting Date")}
               />
               {validationErrors["Meeting Date"] && (
                 <p className="text-rose-400 text-xxs mt-1 flex items-center gap-1">
@@ -246,7 +251,7 @@ export default function ManualForm() {
                 value={formData["Meeting Time"] || ""}
                 onChange={(e) => handleInputChange("Meeting Time", e.target.value)}
                 placeholder="e.g. 10:30 AM"
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                className={getInputClass("Meeting Time")}
               />
             </div>
 
@@ -255,7 +260,7 @@ export default function ManualForm() {
               <select
                 value={formData["Interest Level"] || "Medium"}
                 onChange={(e) => handleInputChange("Interest Level", e.target.value)}
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                className={getInputClass("Interest Level")}
               >
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
@@ -279,7 +284,7 @@ export default function ManualForm() {
                 onChange={(e) => handleInputChange("Doctor Requests", e.target.value)}
                 rows={2}
                 placeholder="e.g. Asked for 3 packages of samples, requested CardioPlus safety dossier."
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
+                className={getInputClass("Doctor Requests") + " resize-none"}
               />
             </div>
 
@@ -290,7 +295,7 @@ export default function ManualForm() {
                 value={formData["Competitor Mentioned"] || ""}
                 onChange={(e) => handleInputChange("Competitor Mentioned", e.target.value)}
                 placeholder="e.g. CardioMax"
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                className={getInputClass("Competitor Mentioned")}
               />
             </div>
 
@@ -301,7 +306,7 @@ export default function ManualForm() {
                 onChange={(e) => handleInputChange("Meeting Notes", e.target.value)}
                 rows={3}
                 placeholder="Write summary notes of the interaction..."
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
+                className={getInputClass("Meeting Notes") + " resize-none"}
               />
             </div>
 
@@ -312,7 +317,7 @@ export default function ManualForm() {
                 onChange={(e) => handleInputChange("Action Items", e.target.value)}
                 rows={2}
                 placeholder="e.g. Send clinical trial reports by Thursday."
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
+                className={getInputClass("Action Items") + " resize-none"}
               />
             </div>
           </div>
@@ -331,7 +336,7 @@ export default function ManualForm() {
                 type="date"
                 value={formData["Follow-up Date"] || ""}
                 onChange={(e) => handleInputChange("Follow-up Date", e.target.value)}
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                className={getInputClass("Follow-up Date")}
               />
             </div>
 
@@ -342,7 +347,7 @@ export default function ManualForm() {
                 value={formData["Representative Name"] || ""}
                 onChange={(e) => handleInputChange("Representative Name", e.target.value)}
                 placeholder="e.g. Alex Green"
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                className={getInputClass("Representative Name")}
               />
             </div>
           </div>
@@ -354,7 +359,7 @@ export default function ManualForm() {
               onChange={(e) => handleInputChange("Additional Comments", e.target.value)}
               rows={2}
               placeholder="Any supplementary comments not fitting in other fields..."
-              className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
+              className={getInputClass("Additional Comments") + " resize-none"}
             />
           </div>
         </div>

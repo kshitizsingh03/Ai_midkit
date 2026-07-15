@@ -53,7 +53,11 @@ def save_manual_interaction(payload: schemas.InteractionCreate, db: Session = De
 def process_chat_transcript(payload: schemas.ChatRequest):
     """Processes chat transcript via LangGraph extraction and returns staging data."""
     try:
-        inputs = {"messages": [HumanMessage(content=payload.text)]}
+        inputs = {
+            "messages": [HumanMessage(content=payload.text)],
+            "current_data": payload.current_data,
+            "ai_insights": payload.ai_insights
+        }
         res = graph.invoke(inputs)
         
         if res.get("error"):
@@ -66,13 +70,11 @@ def process_chat_transcript(payload: schemas.ChatRequest):
         if res.get("messages"):
             message = res["messages"][-1].content
             
-        if not extracted_data and not message:
-            raise HTTPException(status_code=422, detail="AI could not extract structured details. Please verify your transcript contains Doctor Name, Hospital Name, and Product Discussed.")
-            
         return schemas.ChatResponse(
             extracted_data=schemas.InteractionStaged(**extracted_data) if extracted_data else None,
             ai_insights=schemas.AIInsights(**ai_insights) if ai_insights else None,
-            message=message
+            message=message,
+            doctor_history=res.get("doctor_history")
         )
     except HTTPException:
         raise

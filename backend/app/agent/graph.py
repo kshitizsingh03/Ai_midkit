@@ -20,14 +20,22 @@ def route_input(state: AgentState):
         
     last_msg = state["messages"][-1].content.strip()
     
+    # Check if we have current staged data in-memory
+    has_staged = False
+    current_data = state.get("current_data")
+    if current_data:
+        has_staged = any(v for k, v in current_data.items() if v)
+        
     # LLM Router
-    router_prompt = """
+    router_prompt = f"""
     Analyze the user request and determine the user's intent.
     Choose exactly one of the following intents:
     - "extractor": logging a new meeting, note, or transcript (e.g. "I met Dr. X today at Y, discussed Z...")
-    - "editor": editing an existing logged interaction (e.g. "change date of interaction 4 to tomorrow", "edit interest level of interaction 12")
+    - "editor": editing/correcting details of the current meeting or staged fields (e.g. "change doctor name to Dr. Smith", "no, the hospital is Apollo", "change the follow-up date", "it was at 10 AM, not 11 AM", "correct the name to Sharma", "actually the product was CardioPlus")
     - "history": searching for past meetings or history of a doctor (e.g. "what is the history of Dr. Sharma?", "show previous meetings with Dr. Jones")
     - "general": general chatting, greetings, or questions about how to use the system.
+    
+    Current state has staged data: {has_staged}
     
     Return ONLY a single word: extractor, editor, history, or general.
     """
@@ -45,7 +53,7 @@ def route_input(state: AgentState):
         else:
             # fallback keyword mapping
             msg_lower = last_msg.lower()
-            if any(w in msg_lower for w in ["change", "edit", "update", "modify"]):
+            if any(w in msg_lower for w in ["change", "edit", "update", "modify", "correct", "no, it", "no, the", "actually"]):
                 return "editor"
             elif any(w in msg_lower for w in ["history", "previous", "past", "records"]):
                 return "history"
@@ -53,7 +61,7 @@ def route_input(state: AgentState):
     except Exception:
         # fallback rules
         msg_lower = last_msg.lower()
-        if any(w in msg_lower for w in ["change", "edit", "update", "modify"]):
+        if any(w in msg_lower for w in ["change", "edit", "update", "modify", "correct", "no, it", "no, the", "actually"]):
             return "editor"
         elif any(w in msg_lower for w in ["history", "previous", "past", "records"]):
             return "history"
@@ -95,9 +103,49 @@ def extractor_node(state: AgentState):
         return {"error": str(e)}
 
 def editor_node(state: AgentState):
-    """Processes a natural language update instruction for an existing interaction."""
+    """Processes a natural language update instruction for an existing interaction or in-memory staged data."""
     last_msg = state["messages"][-1].content
+    current_data = state.get("current_data")
     
+    # If we have current_data passed from the frontend, we edit it in-memory
+    if current_data:
+        try:
+            # Let's call the Groq LLM using the edit prompt
+            prompt_input = f"Current Data:\n{json.dumps(current_data, indent=2, default=str)}\n\nEdit Instruction:\n{last_msg}"
+            raw_response = call_groq_llm(prompts.EDIT_SYSTEM_PROMPT, prompt_input)
+            updated_data = clean_json_output(raw_response)
+            
+            # Recalculate summary and recommendations based on the updated data
+            summary = generate_meeting_summary_tool(updated_data)
+            recommendations = recommend_next_action_tool(updated_data)
+            
+            # Get old insights or create new ones
+            old_insights = state.get("ai_insights") or {}
+            sentiment = "Positive" if "interested" in str(updated_data.get("Meeting Notes") or "").lower() else old_insights.get("Sentiment", "Neutral")
+            
+            ai_insights = {
+                "Sentiment": sentiment,
+                "Priority": updated_data.get("Follow-up Date") and "High" or "Medium",
+                "Risk Level": old_insights.get("Risk Level", "Low"),
+                "Confidence Score": 1.0,
+                "Meeting Summary": summary,
+                "Next Action Recommendation": recommendations
+            }
+            
+            message = f"I've updated the form fields according to your request: '{last_msg}'."
+            
+            from langchain_core.messages import AIMessage
+            return {
+                "extracted_data": updated_data,
+                "ai_insights": ai_insights,
+                "meeting_summary": summary,
+                "recommendation": recommendations,
+                "messages": [AIMessage(content=message)]
+            }
+        except Exception as e:
+            return {"error": f"Staged edit failed: {str(e)}"}
+            
+    # Fallback to database edit
     editor_parser_prompt = """
     Analyze the user instruction to edit an interaction.
     Extract:

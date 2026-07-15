@@ -8,28 +8,28 @@ export default function AIInsightsPanel() {
   const formData = useSelector((state) => state.interaction.formData);
 
   const getSentimentColor = (sentiment) => {
-    if (!sentiment) return 'bg-slate-800 text-slate-400 border-slate-700';
+    if (!sentiment) return 'bg-slate-800/40 text-slate-400 border-slate-700/50';
     const s = sentiment.toLowerCase();
-    if (s.includes('positive')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-    if (s.includes('negative')) return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-    return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    if (s.includes('positive')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.1)]';
+    if (s.includes('negative')) return 'bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-[0_0_12px_rgba(244,63,94,0.1)]';
+    return 'bg-amber-500/10 text-amber-400 border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.1)]';
   };
 
   const getPriorityColor = (priority) => {
-    if (!priority) return 'bg-slate-800 text-slate-400 border-slate-700';
+    if (!priority) return 'bg-slate-800/40 text-slate-400 border-slate-700/50';
     const p = priority.toLowerCase();
-    if (p.includes('urgent')) return 'bg-rose-600/20 text-rose-400 border-rose-600/30 animate-pulse';
-    if (p.includes('high')) return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
-    if (p.includes('medium')) return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
-    return 'bg-slate-800 text-slate-400 border-slate-700';
+    if (p.includes('urgent')) return 'bg-rose-600/20 text-rose-400 border-rose-600/30 animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.15)]';
+    if (p.includes('high')) return 'bg-orange-500/10 text-orange-400 border-orange-500/30 shadow-[0_0_12px_rgba(249,115,22,0.1)]';
+    if (p.includes('medium')) return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 shadow-[0_0_12px_rgba(99,102,241,0.1)]';
+    return 'bg-slate-800/40 text-slate-400 border-slate-700/50';
   };
 
   const getRiskColor = (risk) => {
-    if (!risk) return 'bg-slate-800 text-slate-400 border-slate-700';
+    if (!risk) return 'bg-slate-800/40 text-slate-400 border-slate-700/50';
     const r = risk.toLowerCase();
-    if (r.includes('high')) return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-    if (r.includes('medium')) return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-    return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    if (r.includes('high')) return 'bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-[0_0_12px_rgba(244,63,94,0.1)]';
+    if (r.includes('medium')) return 'bg-amber-500/10 text-amber-400 border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.1)]';
+    return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.1)]';
   };
 
   const confidencePct = aiInsights["Confidence Score"] 

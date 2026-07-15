@@ -94,28 +94,13 @@ export default function ChatInterface() {
     dispatch(setStatus('loading'));
 
     try {
-      const isEditInstruction = currentInteractionId && (
-        userText.toLowerCase().includes('change') || 
-        userText.toLowerCase().includes('edit') || 
-        userText.toLowerCase().includes('update') || 
-        userText.toLowerCase().includes('set')
-      );
+      const response = await axios.post(`${API_URL}/interaction/chat`, {
+        text: userText,
+        current_data: formData,
+        ai_insights: aiInsights
+      });
 
-      let response;
-      if (isEditInstruction) {
-        // Route to edit endpoint
-        dispatch(addChatMessage({ sender: 'ai', text: `Processing update request: "${userText}"...` }));
-        response = await axios.put(`${API_URL}/interaction/edit/${currentInteractionId}`, {
-          instruction: userText
-        });
-      } else {
-        // Route to standard extraction chat
-        response = await axios.post(`${API_URL}/interaction/chat`, {
-          text: userText
-        });
-      }
-
-      const { extracted_data, ai_insights, message } = response.data;
+      const { extracted_data, ai_insights, message, doctor_history } = response.data;
 
       // Update state if returned
       if (extracted_data) {
@@ -123,6 +108,9 @@ export default function ChatInterface() {
       }
       if (ai_insights) {
         dispatch(setAiInsights(ai_insights));
+      }
+      if (doctor_history) {
+        dispatch(setDoctorHistory(doctor_history));
       }
       
       // If it was a save or extraction that staged an ID (edit endpoint returns staged updates)
@@ -133,16 +121,16 @@ export default function ChatInterface() {
       // Add AI reply message
       let replyMessage = message;
       if (!replyMessage) {
-        replyMessage = isEditInstruction
-          ? `I have successfully updated the fields as requested: "${userText}". Check the updated form details on the left.`
-          : "I have successfully analyzed the transcript and populated the form on the left. Please review the details, verify the AI Insights, and click 'Save Log' when ready!";
+        replyMessage = extracted_data
+          ? "I have successfully analyzed the details and updated the form on the right. Please review the details, verify the AI Insights, and click 'Save Log' when ready!"
+          : "I have successfully processed your request.";
       }
       
       dispatch(addChatMessage({ sender: 'ai', text: replyMessage }));
-      dispatch(showToast({ type: 'success', message: extracted_data ? 'Data extracted successfully!' : 'Query processed successfully!' }));
+      dispatch(showToast({ type: 'success', message: extracted_data ? 'Form updated!' : 'Query processed!' }));
 
-      // Fetch history for doctor if name was extracted
-      if (extracted_data && extracted_data["Doctor Name"]) {
+      // Fetch history for doctor if name was extracted and doctor_history was not returned directly
+      if (extracted_data && extracted_data["Doctor Name"] && !doctor_history) {
         try {
           const historyRes = await axios.get(`${API_URL}/doctor/history`, {
             params: { doctor_name: extracted_data["Doctor Name"] }
@@ -215,6 +203,37 @@ export default function ChatInterface() {
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Quick Action Suggestion Chips */}
+      <div className="px-4 py-2 bg-slate-950/20 border-t border-slate-850 flex flex-wrap gap-2">
+        {[
+          { label: "🎙️ Log Meeting", text: "Today I met Dr. Sanjay Sharma at City Hospital. We discussed CardioPlus. Doctor was very interested and positive about it. Schedule follow-up after two weeks at 10 AM." },
+          { label: "✏️ Change Doctor", text: "Actually, change the doctor name to Dr. Sanjay Sharma." },
+          { label: "✏️ Change Time", text: "Set meeting time to 11:30 AM." },
+          { label: "📋 Show History", text: "Show previous interactions with Dr. Sanjay Sharma." }
+        ].map((chip, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => setInputValue(chip.text)}
+            className="px-2.5 py-1 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 text-[10px] text-slate-400 hover:text-indigo-300 transition-all font-medium"
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Speech wave visualizer */}
+      {isListening && (
+        <div className="flex items-center justify-center gap-1.5 py-2.5 bg-rose-500/5 border-t border-rose-500/10">
+          <span className="text-[10px] text-rose-450 font-bold tracking-wider animate-pulse mr-2">RECORDING VOICE INPUT:</span>
+          <div className="w-0.5 h-4 bg-rose-500 rounded-full origin-bottom animate-wave-1"></div>
+          <div className="w-0.5 h-6 bg-rose-500 rounded-full origin-bottom animate-wave-2"></div>
+          <div className="w-0.5 h-3 bg-rose-500 rounded-full origin-bottom animate-wave-3"></div>
+          <div className="w-0.5 h-7 bg-rose-500 rounded-full origin-bottom animate-wave-4"></div>
+          <div className="w-0.5 h-4 bg-rose-500 rounded-full origin-bottom animate-wave-5"></div>
+        </div>
+      )}
 
       {/* Chat Input */}
       <form onSubmit={handleSendMessage} className="p-4 bg-slate-900/60 border-t border-slate-850">

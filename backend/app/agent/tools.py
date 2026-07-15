@@ -24,11 +24,11 @@ def clean_json_output(content: str) -> dict:
     return json.loads(content)
 
 def call_groq_llm(system_prompt: str, user_prompt: str) -> str:
-    """Helper to call Groq LLM with fallback from gemma2-9b-it to llama-3.3-70b-versatile."""
+    """Helper to call Groq LLM with fallback from llama-3.3-70b-versatile to llama-3.1-8b-instant."""
     try:
         llm = ChatGroq(
             groq_api_key=settings.GROQ_API_KEY,
-            model_name="gemma2-9b-it",
+            model_name="llama-3.3-70b-versatile",
             temperature=0.0
         )
         messages = [
@@ -38,11 +38,11 @@ def call_groq_llm(system_prompt: str, user_prompt: str) -> str:
         response = llm.invoke(messages)
         return response.content
     except Exception as e:
-        logger.warning(f"Error calling gemma2-9b-it: {e}. Trying fallback llama-3.3-70b-versatile.")
+        logger.warning(f"Error calling llama-3.3-70b-versatile: {e}. Trying fallback llama-3.1-8b-instant.")
         try:
             llm = ChatGroq(
                 groq_api_key=settings.GROQ_API_KEY,
-                model_name="llama-3.3-70b-versatile",
+                model_name="llama-3.1-8b-instant",
                 temperature=0.0
             )
             messages = [

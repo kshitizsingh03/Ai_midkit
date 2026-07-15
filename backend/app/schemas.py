@@ -127,6 +127,7 @@ class ChatResponse(BaseModel):
     ai_insights: Optional[AIInsights] = None
     message: Optional[str] = None
     id: Optional[int] = None
+    doctor_history: Optional[List[dict]] = None
 
     class Config:
         populate_by_name = True
@@ -148,6 +149,8 @@ class InteractionResponse(InteractionBase):
 # API Request Payloads
 class ChatRequest(BaseModel):
     text: str
+    current_data: Optional[dict] = None
+    ai_insights: Optional[dict] = None
 
 class EditRequest(BaseModel):
     instruction: str

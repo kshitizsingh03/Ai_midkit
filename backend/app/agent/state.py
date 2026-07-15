@@ -10,3 +10,4 @@ class AgentState(TypedDict):
     meeting_summary: Optional[str]
     interaction_id: Optional[int]
     error: Optional[str]
+    current_data: Optional[dict]
