@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setActiveTab } from './store/interactionSlice';
 import ManualForm from './components/ManualForm';
 import ChatInterface from './components/ChatInterface';
 import AIInsightsPanel from './components/AIInsightsPanel';
 import Toast from './components/Toast';
-import { Stethoscope, UserCheck, Bot, BarChart2 } from 'lucide-react';
+import HistoryDrawer from './components/HistoryDrawer';
+import { Stethoscope, UserCheck, Bot, BarChart2, History } from 'lucide-react';
 
 export default function App() {
   const activeTab = useSelector((state) => state.interaction.activeTab);
   const dispatch = useDispatch();
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   return (
     <div className="min-h-screen text-slate-800 pb-12 flex flex-col bg-slate-50">
@@ -34,7 +36,16 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setIsHistoryOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all bg-white shadow-sm"
+            >
+              <History className="h-4 w-4 text-indigo-600" />
+              View History
+            </button>
+
             <div className="hidden sm:flex flex-col items-end text-right">
               <span className="text-xs font-semibold text-slate-700 flex items-center gap-1">
                 <UserCheck className="h-3.5 w-3.5 text-indigo-600" /> Alex Green
@@ -113,6 +124,9 @@ export default function App() {
         </div>
 
       </main>
+
+      {/* Slide-out Drawer for All Interactions History */}
+      <HistoryDrawer isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
 
       {/* Global Slide-In Toast Notification */}
       <Toast />

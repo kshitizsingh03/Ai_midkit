@@ -153,17 +153,7 @@ export default function ManualForm() {
       }
 
       dispatch(showToast({ type: 'success', message: 'Interaction saved successfully!' }));
-      dispatch(setCurrentInteractionId(response.data.id));
-      
-      try {
-        const historyRes = await axios.get(`${API_URL}/doctor/history`, {
-          params: { doctor_name: formData["Doctor Name"] }
-        });
-        dispatch(setDoctorHistory(historyRes.data));
-      } catch (err) {
-        console.error("Failed to refresh history:", err);
-      }
-      
+      dispatch(clearForm());
       dispatch(setStatus('success'));
     } catch (error) {
       console.error(error);

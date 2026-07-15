@@ -168,3 +168,11 @@ def recommend_next_action(payload: schemas.InteractionBase):
         return schemas.RecommendationResponse(recommendation=rec)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/interactions", response_model=List[schemas.InteractionResponse])
+def get_interactions(limit: int = 100, db: Session = Depends(get_db)):
+    """Fetches all logged interactions from the database, ordered by date."""
+    try:
+        return crud.get_all_interactions(db, limit=limit)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

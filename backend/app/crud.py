@@ -144,6 +144,9 @@ def update_interaction(db: Session, interaction_id: int, item: schemas.Interacti
 def get_interaction(db: Session, interaction_id: int):
     return db.query(models.Interaction).filter(models.Interaction.id == interaction_id).first()
 
+def get_all_interactions(db: Session, limit: int = 100):
+    return db.query(models.Interaction).order_by(models.Interaction.meeting_date.desc()).limit(limit).all()
+
 def get_interactions_by_doctor_name(db: Session, doctor_name: str):
     return db.query(models.Interaction).filter(
         models.Interaction.doctor_name.ilike(f"%{doctor_name}%")
