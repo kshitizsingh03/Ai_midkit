@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { updateAllFormData, setAiInsights, setCurrentInteractionId, showToast } from '../store/interactionSlice';
 import axios from 'axios';
-import { X, Search, Calendar, User, FileText, ChevronDown, Edit2 } from 'lucide-react';
+import { X, Search, Calendar, ChevronDown, Edit2 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -34,21 +34,21 @@ export default function HistoryDrawer({ isOpen, onClose }) {
 
   const handleEdit = (rec) => {
     const formFields = {
-      "Doctor Name": rec.doctor_name,
-      "Hospital Name": rec.hospital_name,
-      "Specialization": rec.specialization,
-      "Department": rec.department,
-      "Product Discussed": rec.product_discussed,
-      "Meeting Date": rec.meeting_date,
-      "Meeting Time": rec.meeting_time,
-      "Interest Level": rec.interest_level || "Medium",
-      "Meeting Notes": rec.meeting_notes,
-      "Action Items": rec.action_items,
-      "Follow-up Date": rec.follow_up_date,
-      "Doctor Requests": rec.doctor_requests,
-      "Competitor Mentioned": rec.competitor_mentioned,
-      "Additional Comments": rec.additional_comments,
-      "Representative Name": rec.representative_name,
+      "Doctor Name": rec["Doctor Name"],
+      "Hospital Name": rec["Hospital Name"],
+      "Specialization": rec["Specialization"],
+      "Department": rec["Department"],
+      "Product Discussed": rec["Product Discussed"],
+      "Meeting Date": rec["Meeting Date"],
+      "Meeting Time": rec["Meeting Time"],
+      "Interest Level": rec["Interest Level"] || "Medium",
+      "Meeting Notes": rec["Meeting Notes"],
+      "Action Items": rec["Action Items"],
+      "Follow-up Date": rec["Follow-up Date"],
+      "Doctor Requests": rec["Doctor Requests"],
+      "Competitor Mentioned": rec["Competitor Mentioned"],
+      "Additional Comments": rec["Additional Comments"],
+      "Representative Name": rec["Representative Name"],
     };
     const insights = {
       "Sentiment": rec.sentiment || "Neutral",
@@ -62,14 +62,14 @@ export default function HistoryDrawer({ isOpen, onClose }) {
     dispatch(updateAllFormData(formFields));
     dispatch(setAiInsights(insights));
     dispatch(setCurrentInteractionId(rec.id));
-    dispatch(showToast({ type: 'success', message: `Loaded ${rec.doctor_name}'s record for editing!` }));
+    dispatch(showToast({ type: 'success', message: `Loaded ${rec["Doctor Name"]}'s record for editing!` }));
     onClose();
   };
 
   const filteredRecords = records.filter(rec => 
-    (rec.doctor_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (rec.hospital_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (rec.product_discussed || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (rec["Doctor Name"] || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (rec["Hospital Name"] || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (rec["Product Discussed"] || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getSentimentEmoji = (sentiment) => {
@@ -124,16 +124,16 @@ export default function HistoryDrawer({ isOpen, onClose }) {
           {/* Records List */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/20">
             {loading ? (
-              <div className="text-center py-12 text-xs text-slate-400">Loading history records...</div>
+              <div className="text-center py-12 text-xs text-slate-450">Loading history records...</div>
             ) : filteredRecords.length === 0 ? (
-              <div className="text-center py-12 text-xs text-slate-450 italic">No records found.</div>
+              <div className="text-center py-12 text-xs text-slate-400 italic">No records found.</div>
             ) : (
               filteredRecords.map((rec) => {
                 const isExpanded = expandedId === rec.id;
                 return (
                   <div 
                     key={rec.id} 
-                    className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-350 transition-all shadow-xs"
+                    className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-all shadow-xs"
                   >
                     {/* Compact Card Header */}
                     <div 
@@ -142,14 +142,14 @@ export default function HistoryDrawer({ isOpen, onClose }) {
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-slate-850">{rec.doctor_name}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100">
-                            {rec.product_discussed}
+                          <span className="font-bold text-xs text-slate-800">{rec["Doctor Name"]}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-750 font-semibold border border-indigo-100">
+                            {rec["Product Discussed"]}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 text-[10px] text-slate-500">
-                          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {rec.meeting_date}</span>
-                          <span>{rec.hospital_name}</span>
+                          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {rec["Meeting Date"]}</span>
+                          <span>{rec["Hospital Name"]}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -163,48 +163,48 @@ export default function HistoryDrawer({ isOpen, onClose }) {
                       <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50/10 space-y-3 text-[11px] text-slate-700">
                         {rec.meeting_summary && (
                           <div>
-                            <span className="font-bold text-slate-450 uppercase tracking-wider text-[9px] block mb-0.5">Summary</span>
+                            <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] block mb-0.5">Summary</span>
                             <p className="bg-white border border-slate-200 p-2.5 rounded-xl text-slate-700 leading-relaxed shadow-inner">{rec.meeting_summary}</p>
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                           <div>
-                            <span className="font-bold text-slate-450 uppercase tracking-wider text-[9px] block">Hospital</span>
-                            <span className="text-slate-800 font-medium">{rec.hospital_name}</span>
+                            <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] block">Hospital</span>
+                            <span className="text-slate-800 font-medium">{rec["Hospital Name"]}</span>
                           </div>
                           <div>
-                            <span className="font-bold text-slate-450 uppercase tracking-wider text-[9px] block">Specialization</span>
-                            <span className="text-slate-800 font-medium">{rec.specialization || 'N/A'}</span>
+                            <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] block">Specialization</span>
+                            <span className="text-slate-800 font-medium">{rec["Specialization"] || 'N/A'}</span>
                           </div>
                           <div>
-                            <span className="font-bold text-slate-450 uppercase tracking-wider text-[9px] block">Department</span>
-                            <span className="text-slate-800 font-medium">{rec.department || 'N/A'}</span>
+                            <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] block">Department</span>
+                            <span className="text-slate-800 font-medium">{rec["Department"] || 'N/A'}</span>
                           </div>
                           <div>
-                            <span className="font-bold text-slate-450 uppercase tracking-wider text-[9px] block">Time</span>
-                            <span className="text-slate-800 font-medium">{rec.meeting_time || 'N/A'}</span>
+                            <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] block">Time</span>
+                            <span className="text-slate-800 font-medium">{rec["Meeting Time"] || 'N/A'}</span>
                           </div>
                           <div>
-                            <span className="font-bold text-slate-450 uppercase tracking-wider text-[9px] block">Sentiment</span>
+                            <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] block">Sentiment</span>
                             <span className="text-slate-800 font-medium">{rec.sentiment || 'Neutral'}</span>
                           </div>
                           <div>
-                            <span className="font-bold text-slate-450 uppercase tracking-wider text-[9px] block">Priority</span>
+                            <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] block">Priority</span>
                             <span className="text-slate-800 font-medium">{rec.priority || 'Medium'}</span>
                           </div>
                         </div>
 
-                        {rec.meeting_notes && (
+                        {rec["Meeting Notes"] && (
                           <div>
-                            <span className="font-bold text-slate-450 uppercase tracking-wider text-[9px] block mb-0.5">Meeting Notes</span>
-                            <p className="bg-white border border-slate-200 p-2.5 rounded-xl text-slate-700 leading-relaxed whitespace-pre-line shadow-inner">{rec.meeting_notes}</p>
+                            <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] block mb-0.5">Meeting Notes</span>
+                            <p className="bg-white border border-slate-200 p-2.5 rounded-xl text-slate-700 leading-relaxed whitespace-pre-line shadow-inner">{rec["Meeting Notes"]}</p>
                           </div>
                         )}
 
-                        {rec.action_items && (
+                        {rec["Action Items"] && (
                           <div>
-                            <span className="font-bold text-slate-450 uppercase tracking-wider text-[9px] block mb-0.5">Action Items</span>
-                            <p className="bg-white border border-slate-200 p-2.5 rounded-xl text-slate-700 leading-relaxed shadow-inner">{rec.action_items}</p>
+                            <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] block mb-0.5">Action Items</span>
+                            <p className="bg-white border border-slate-200 p-2.5 rounded-xl text-slate-700 leading-relaxed shadow-inner">{rec["Action Items"]}</p>
                           </div>
                         )}
 
